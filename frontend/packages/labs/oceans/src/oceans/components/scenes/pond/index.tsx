@@ -288,7 +288,12 @@ class Pond extends React.Component {
             />
           </button>
         )}
-        <img className="ocean-pond__bot" src={aiBotClosed} alt="" />
+        <div className="ocean-pond__bot">
+          <img src={aiBotClosed} alt="" />
+          <span className="ocean-bot__label" aria-hidden="true">
+            {I18n.t('aiAbbreviation')}
+          </span>
+        </div>
         {state.canSkipPond && (
           <div id="uitest-nav-btns">
             {state.appMode === AppMode.FishLong ? (

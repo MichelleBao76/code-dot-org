@@ -1,6 +1,9 @@
-import {describe, it, expect, beforeEach, vi} from 'vitest';
+import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
+
+import {localization} from '@code-dot-org/core/plugins/localization';
 
 import {AppMode, ClassType} from '../../../../src/oceans/constants';
+import I18n from '../../../../src/oceans/i18n';
 import {resetState, setState, getState} from '../../../../src/oceans/state';
 import {initFishData} from '../../../../src/utils/fishData';
 
@@ -70,5 +73,63 @@ describe('train model — onClassifyFish', () => {
     );
     train.onClassifyFish(false);
     expect(getState().noCount).toBe(1);
+  });
+});
+
+describe('refreshLocalizedState', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('uses the Spanish abbreviation for the robot label', () => {
+    I18n.initI18n();
+    vi.spyOn(localization, 'locale', 'get').mockReturnValue('es-419');
+
+    expect(I18n.t('aiAbbreviation')).toBe('IA');
+  });
+
+  it('drops cached strings when a translation dictionary is updated', () => {
+    I18n.initI18n();
+    const translate = vi
+      .spyOn(localization, 'translate')
+      .mockImplementation(source => source);
+
+    expect(I18n.t('fish')).toBe('Fish');
+
+    translate.mockImplementation(source => `translated:${source}`);
+    I18n.clearTranslationCache();
+
+    expect(I18n.t('fish')).toBe('translated:Fish');
+  });
+
+  it('refreshes labels and preserves training progress', async () => {
+    I18n.initI18n();
+    vi.spyOn(localization, 'translate').mockImplementation(source =>
+      `translated:${source}`,
+    );
+    const fishData = [{id: 'fish'}];
+    setState({
+      appMode: AppMode.FishLong,
+      wordKey: 'fun',
+      word: 'Fun',
+      trainingQuestionKey: 'isThisFish',
+      trainingQuestion: 'Is this fish fun?',
+      fishData,
+      yesCount: 7,
+      noCount: 3,
+    });
+
+    const {refreshLocalizedState} = await import(
+      '../../../../src/oceans/models/train'
+    );
+    refreshLocalizedState();
+
+    expect(getState().word).toBe('translated:Fun');
+    expect(getState().trainingQuestion).toBe(
+      'translated:Is this fish translated:fun?',
+    );
+    expect(getState().fishData).toBe(fishData);
+    expect(getState().yesCount).toBe(7);
+    expect(getState().noCount).toBe(3);
   });
 });

@@ -59,7 +59,9 @@ export interface State {
   /** Set to true when the current mode should render sea-creature images. */
   loadCreatureImages: boolean | null;
   word: string | null;
+  wordKey: string | null;
   trainingQuestion: string | null;
+  trainingQuestionKey: string | null;
   currentInstructionsPage: number;
   pondFishBounds: PondFishBound[] | null;
   pondClickedFish: {id: number | string; x: number; y: number} | null;
@@ -134,7 +136,9 @@ const initialState: State = {
   loadTrashImages: null,
   loadCreatureImages: null,
   word: null,
+  wordKey: null,
   trainingQuestion: null,
+  trainingQuestionKey: null,
   currentInstructionsPage: 0,
   pondFishBounds: null,
   pondClickedFish: null,

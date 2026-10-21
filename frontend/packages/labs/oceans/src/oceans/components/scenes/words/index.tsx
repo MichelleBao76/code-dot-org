@@ -98,6 +98,8 @@ class Words extends React.Component<Record<string, never>, WordsState> {
     const word = I18n.t(wordKey);
     setState({
       word,
+      wordKey,
+      trainingQuestionKey: 'isThisFish',
       trainingQuestion: I18n.t('isThisFish', {word: word.toLowerCase()}),
     });
     modeHelpers.toMode(Modes.Training);

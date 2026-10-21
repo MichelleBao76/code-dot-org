@@ -305,9 +305,29 @@
 }
 
 .ocean-train__bot-body {
+  display: block;
+  width: 100%;
+  direction: ltr;
+}
+
+.ocean-train__bot-body-container {
+  position: relative;
   width: 49%;
   margin-top: 30%;
-  direction: ltr;
+}
+
+.ocean-bot__label {
+  position: absolute;
+  left: 68%;
+  top: 69%;
+  min-width: 18%;
+  background: #fff;
+  color: #888;
+  font-size: 0.75em;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .ocean-counter {
@@ -415,6 +435,18 @@
   bottom: 0;
   transform: translateX(-45%);
   pointer-events: none;
+}
+
+.ocean-pond__bot > img {
+  display: block;
+  height: 100%;
+}
+
+.ocean-pond__bot .ocean-bot__label {
+  left: 57%;
+  top: 69%;
+  min-width: 20%;
+  font-size: 0.65em;
 }
 
 .ocean-pond__recall-icons {

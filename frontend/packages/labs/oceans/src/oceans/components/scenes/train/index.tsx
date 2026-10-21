@@ -44,7 +44,12 @@ class Train extends React.Component<Record<string, never>, TrainState> {
         <div className="ocean-train__question">{state.trainingQuestion}</div>
         <div className="ocean-train__bot">
           <img src={aiBotHead} className={botHeadClassName} alt="" />
-          <img src={aiBotBody} className="ocean-train__bot-body" alt="" />
+          <div className="ocean-train__bot-body-container">
+            <img src={aiBotBody} className="ocean-train__bot-body" alt="" />
+            <span className="ocean-bot__label" aria-hidden="true">
+              {I18n.t('aiAbbreviation')}
+            </span>
+          </div>
         </div>
         <div className="ocean-counter">
           <img src={counterIcon} className="ocean-counter__img" alt="" />

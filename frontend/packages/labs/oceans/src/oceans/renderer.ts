@@ -30,6 +30,7 @@ import {
   filterFishComponents,
   $time,
 } from './helpers';
+import I18n from './i18n';
 import {predictFish} from './models/predict';
 import soundLibrary from './models/soundLibrary';
 import {
@@ -666,6 +667,26 @@ const drawPredictBot = (state: State): void => {
   }
 
   ctx.drawImage(botImg, botX, botY);
+  drawBotLabel(ctx, botImg, botX, botY);
+};
+
+/** Replace the acronym baked into each bot sprite with the current translation. */
+const drawBotLabel = (
+  ctx: CanvasRenderingContext2D,
+  botImg: HTMLImageElement,
+  x: number,
+  y: number,
+): void => {
+  const labelX = x + botImg.width * 0.56;
+  const labelY = y + botImg.height * 0.69;
+  ctx.save();
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(labelX, labelY, botImg.width * 0.3, botImg.height * 0.1);
+  ctx.fillStyle = '#888';
+  ctx.font = `bold ${Math.max(10, botImg.width * 0.09)}px Arial, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(I18n.t('aiAbbreviation'), labelX + 3, labelY + botImg.height * 0.045);
+  ctx.restore();
 };
 
 /** Draw the word-mode fish swimming across the screen in their lanes. */

@@ -31,13 +31,17 @@ const init = (): void => {
 
   if (state.appMode === AppMode.FishVTrash) {
     setState({
+      wordKey: 'fish',
       word: I18n.t('fish'),
+      trainingQuestionKey: 'isThisAFish',
       trainingQuestion: I18n.t('isThisAFish'),
     });
   }
   if (state.appMode === AppMode.CreaturesVTrash) {
     setState({
+      wordKey: 'waterCreature',
       word: I18n.t('waterCreature'),
+      trainingQuestionKey: 'doesThisBelongInWater',
       trainingQuestion: I18n.t('doesThisBelongInWater'),
     });
   }
@@ -48,6 +52,23 @@ const init = (): void => {
     trainer,
     isRunning: true,
   });
+};
+
+/** Refresh stored labels after the host changes language; model data is untouched. */
+export const refreshLocalizedState = (): void => {
+  const state = getState();
+  const word = state.wordKey ? I18n.t(state.wordKey) : state.word;
+  let trainingQuestion = state.trainingQuestion;
+
+  if (state.trainingQuestionKey === 'isThisFish') {
+    trainingQuestion = I18n.t('isThisFish', {
+      word: word?.toLowerCase(),
+    });
+  } else if (state.trainingQuestionKey) {
+    trainingQuestion = I18n.t(state.trainingQuestionKey);
+  }
+
+  setState({word, trainingQuestion});
 };
 
 /**

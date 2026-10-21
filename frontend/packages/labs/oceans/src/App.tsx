@@ -1,5 +1,7 @@
 import {useCallback, useEffect, useRef} from 'react';
 
+import {localization} from '@code-dot-org/core/plugins/localization';
+
 // Scene styles live in CSS classes — pull them in here so the lab works
 // in any consumer (standalone dev harness, library build, studio embed)
 // without each consumer having to remember to import the CSS separately.
@@ -10,7 +12,9 @@ import {
   type AppModeValue,
   OCEANS_UI_CONTAINER_ID,
 } from './oceans/constants';
+import I18n from './oceans/i18n';
 import {initAll, stopUIRerender} from './oceans/init';
+import {refreshLocalizedState} from './oceans/models/train';
 import Sounds from './oceans/Sounds';
 
 /** Props for the OceansLab React component. */
@@ -75,6 +79,18 @@ export default function OceansLab({
       stopUIRerender();
     };
   }, [appMode, guides, textToSpeechLocale, stableOnContinue]);
+
+  useEffect(() => {
+    const handleLocaleChange = () => {
+      I18n.clearTranslationCache();
+      refreshLocalizedState();
+    };
+    localization.on('change', handleLocaleChange);
+
+    return () => {
+      localization.off('change', handleLocaleChange);
+    };
+  }, []);
 
   // 16:9 responsive wrapper — padding-top 56.25% creates the aspect-ratio box.
   // Canvas JS resolution is set to 1024×576 by initAll; CSS width/height 100%

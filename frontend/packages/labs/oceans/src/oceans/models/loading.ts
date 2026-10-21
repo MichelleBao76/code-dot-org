@@ -2,6 +2,7 @@ import {initFishData} from '../../utils/fishData';
 import KNNTrainer from '../../utils/KNNTrainer';
 import {AppMode, Modes} from '../constants';
 import {getAppMode, $time, finishLoading} from '../helpers';
+import I18n from '../i18n';
 import {toMode} from '../modeTransition';
 import {initRenderer} from '../renderer';
 import {getState, setState} from '../state';
@@ -34,7 +35,7 @@ export const init = async (): Promise<void> => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (oceanObj as {getTensor: () => unknown}).getTensor() as any,
     );
-    setState({trainer, word: 'fish'});
+    setState({trainer, wordKey: 'fish', word: I18n.t('fish')});
   }
 
   setState({loadTrashImages, loadCreatureImages});

@@ -1,5 +1,7 @@
 import MessageFormat from 'messageformat';
 
+import {localization} from '@code-dot-org/core/plugins/localization';
+
 import data from '../../i18n/oceans.json';
 
 type CompiledMessages = Record<
@@ -8,6 +10,7 @@ type CompiledMessages = Record<
 >;
 
 let messages: CompiledMessages | undefined;
+const translatedMessages = new Map<string, string>();
 
 /**
  * Initialises the i18n runtime with optional caller-supplied message overrides.
@@ -20,6 +23,12 @@ const initI18n = (i18n: CompiledMessages = {}): void => {
   // English pluralisation rules are used for all locales for now.
   const mf = new MessageFormat('en');
   messages = {...(mf.compile(data) as unknown as CompiledMessages), ...i18n};
+  translatedMessages.clear();
+};
+
+/** Discard translations cached before a locale or translation dictionary update. */
+const clearTranslationCache = (): void => {
+  translatedMessages.clear();
 };
 
 /**
@@ -34,10 +43,21 @@ const t = (key: string, options?: Record<string, unknown>): string => {
   if (!messages) {
     throw new Error('I18n must be initialized before calling t');
   }
-  return messages[key](options);
+  if (key === 'aiAbbreviation' && localization.locale.split('-')[0] === 'es') {
+    return 'IA';
+  }
+  const source = messages[key](options);
+  const cacheKey = `${localization.locale}\u0000${source}`;
+  let translated = translatedMessages.get(cacheKey);
+  if (translated === undefined) {
+    translated = localization.translate(source);
+    translatedMessages.set(cacheKey, translated);
+  }
+  return translated;
 };
 
 export default {
   initI18n,
+  clearTranslationCache,
   t,
 };

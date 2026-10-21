@@ -106,5 +106,6 @@
   "mouths": "mouth",
   "colors": "colors",
   "switchToMatchingItems": "Switch to Matching Items",
-  "switchToNonMatchingItems": "Switch to Non-Matching Items"
+  "switchToNonMatchingItems": "Switch to Non-Matching Items",
+  "aiAbbreviation": "A.I."
 }

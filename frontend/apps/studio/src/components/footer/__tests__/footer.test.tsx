@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import {render, screen, act} from '@testing-library/react';
+import {render, screen, act, fireEvent} from '@testing-library/react';
 import {describe, expect, it, vi, beforeEach} from 'vitest';
 
 // Hoisted mocks — declared before vi.mock hoisting so factory closures
@@ -10,7 +10,10 @@ import {describe, expect, it, vi, beforeEach} from 'vitest';
 const {mockLocalization, mockSiteConfig} = vi.hoisted(() => {
   const mockLocalization = {
     locale: 'en',
-    locales: [{value: 'en', text: 'English', rtl: false}],
+    locales: [
+      {value: 'en', text: 'English', rtl: false},
+      {value: 'es', text: 'Español', rtl: false},
+    ],
     on: vi.fn((_event: string, cb: () => void) => cb()),
     off: vi.fn(),
     waitUntilLoaded: vi.fn(() => Promise.resolve(true)),
@@ -40,9 +43,10 @@ vi.mock('@code-dot-org/core', async importOriginal => {
   return {...actual, CodeStudioConfig: mockSiteConfig};
 });
 
-import StudioFooter from '../index';
+import StudioFooter, {StudioLanguagePicker} from '../index';
 
 beforeEach(() => {
+  mockLocalization.locale = 'en';
   mockLocalization.waitUntilLoaded.mockResolvedValue(true);
   mockSiteConfig.brand = 'code.org';
 });
@@ -91,5 +95,17 @@ describe('StudioFooter', () => {
     // is mocked; verify no network call is made.
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+  });
+
+  it('provides the language picker for full-screen routes', async () => {
+    await act(async () => {
+      render(<StudioLanguagePicker />);
+    });
+
+    fireEvent.change(screen.getByRole('combobox', {name: 'Language'}), {
+      target: {value: 'es'},
+    });
+
+    expect(mockLocalization.locale).toBe('es');
   });
 });

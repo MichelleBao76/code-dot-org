@@ -28,7 +28,7 @@ import {
 } from '@code-dot-org/component-library/themes';
 import {QueryClientProvider} from '@code-dot-org/core/api';
 
-import StudioFooter from '@/components/footer';
+import StudioFooter, {StudioLanguagePicker} from '@/components/footer';
 import SiteHeader from '@/components/header';
 import {
   fetchAuthOutcome,
@@ -90,8 +90,23 @@ function RootContent() {
           the fold while a route's chunk or data loads, and doesn't jump down when
           the content arrives. Layout-level concern shared by every async route;
           the offset approximates the header height. */}
-      <Box sx={{minHeight: 'calc(100vh - 50px)'}}>
+      <Box sx={{minHeight: 'calc(100vh - 50px)', position: 'relative'}}>
         {renderRouteArea(auth, onRetry)}
+        {hideFooter && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 16,
+              zIndex: 10,
+              bgcolor: 'background.paper',
+              borderRadius: 1,
+              px: 1,
+            }}
+          >
+            <StudioLanguagePicker />
+          </Box>
+        )}
       </Box>
       {!hideFooter && <StudioFooter />}
       <TanStackRouterDevtools />

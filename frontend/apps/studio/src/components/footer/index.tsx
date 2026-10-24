@@ -1,5 +1,13 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from 'react';
 
+import {SimpleDropdown} from '@code-dot-org/component-library/dropdown';
 import Footer from '@code-dot-org/component-library/footer';
 import {CodeStudioConfig as siteConfig} from '@code-dot-org/core';
 import {localization} from '@code-dot-org/core/plugins/localization';
@@ -87,6 +95,30 @@ const StudioFooter = () => {
       languages={isReady ? locales : 'loading'}
       selectedLocaleCode={locale}
       onLanguageChange={handleLanguageChange}
+    />
+  );
+};
+
+/** Language control for full-screen routes that suppress the global footer. */
+export const StudioLanguagePicker = () => {
+  const {locale, locales, isReady} = useLocaleSelectorState();
+  const handleLanguageChange = useCallback((code: string) => {
+    localization.locale = code;
+  }, []);
+
+  return (
+    <SimpleDropdown
+      name="studio-language"
+      labelText="Language"
+      isLabelVisible={false}
+      items={locales}
+      selectedValue={locale}
+      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+        handleLanguageChange(event.target.value)
+      }
+      disabled={!isReady}
+      size="s"
+      aria-label="Language"
     />
   );
 };

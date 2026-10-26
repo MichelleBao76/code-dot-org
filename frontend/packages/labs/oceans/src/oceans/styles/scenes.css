@@ -288,10 +288,11 @@
   width: 100%;
   display: flex;
   justify-content: center;
-}
 
-.ocean-train__button-yes {
-  margin-left: 10px;
+  /* `gap` rather than a margin on one button: a physical margin-left ends up
+   * on the outer edge in right-to-left locales, leaving the two white buttons
+   * touching with a seam between them. */
+  gap: 10px;
 }
 
 /* Scoped to real pointer devices: on touch, `:hover` is applied by the tap

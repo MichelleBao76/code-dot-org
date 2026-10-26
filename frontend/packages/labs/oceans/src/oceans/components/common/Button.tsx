@@ -20,6 +20,9 @@ interface ButtonProps
  */
 class Button extends React.Component<ButtonProps> {
   onClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (this.props.disabled) {
+      return;
+    }
     guide.dismissCurrentGuide();
     const clickReturnValue = this.props.onClick && this.props.onClick(event);
 
@@ -39,7 +42,10 @@ class Button extends React.Component<ButtonProps> {
         id={this.props.id}
         className={className}
         style={this.props.style}
-        disabled={this.props.disabled}
+        // aria-disabled rather than `disabled`: a natively disabled button
+        // drops keyboard focus, so a keyboard user would have to tab back
+        // after every answer.
+        aria-disabled={this.props.disabled || undefined}
         onClick={this.onClick}
       >
         {this.props.children}

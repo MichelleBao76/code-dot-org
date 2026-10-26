@@ -95,13 +95,28 @@
   color: var(--ocean-color-grey);
   font-size: 100%;
 
+  /* Tells the browser taps are never for double-tap-zoom/panning, so it can
+   * dispatch click immediately instead of waiting ~300ms to see if a second
+   * tap follows. Without this, taps on some mobile browsers can feel like
+   * they need to be repeated. */
+  touch-action: manipulation;
+
   /* em so padding scales with font-size regardless of consumer context. */
   padding: 0.75em 1.5em;
   border-radius: 8px;
   min-width: 15%;
+
+  /* ~44px at the lab's base font size: the minimum recommended touch
+   * target so buttons are easy to tap accurately on phones/tablets. */
+  min-height: 2.75em;
   border: none;
   white-space: nowrap;
   line-height: 1.3;
+}
+
+.ocean-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .ocean-button--continue {
@@ -157,11 +172,18 @@
   margin-top: 2%;
 }
 
-/* Hover/focus tinting for the words buttons. */
-.ocean-word-button:hover,
+/* Keep the focus ring tint always (keyboard users); scope the hover tint to
+ * devices with a real pointer so a tap doesn't leave it "stuck" selected. */
 .ocean-word-button:focus {
   background-color: var(--ocean-color-orange);
   color: var(--ocean-color-white);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ocean-word-button:hover {
+    background-color: var(--ocean-color-orange);
+    color: var(--ocean-color-white);
+  }
 }
 
 /* ── Confirmation dialog ───────────────────────────────────────────── */
@@ -272,14 +294,19 @@
   margin-left: 10px;
 }
 
-.ocean-train__button-yes:hover {
-  background-color: var(--ocean-color-green);
-  color: var(--ocean-color-white);
-}
+/* Scoped to real pointer devices: on touch, `:hover` is applied by the tap
+ * and never properly cleared, so the just-tapped Yes/No button would stay
+ * tinted as if still "selected" on the next question. */
+@media (hover: hover) and (pointer: fine) {
+  .ocean-train__button-yes:hover {
+    background-color: var(--ocean-color-green);
+    color: var(--ocean-color-white);
+  }
 
-.ocean-train__button-no:hover {
-  background-color: var(--ocean-color-red);
-  color: var(--ocean-color-white);
+  .ocean-train__button-no:hover {
+    background-color: var(--ocean-color-red);
+    color: var(--ocean-color-white);
+  }
 }
 
 .ocean-train__bot {

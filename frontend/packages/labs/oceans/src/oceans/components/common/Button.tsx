@@ -7,7 +7,7 @@ import soundLibrary from '@/oceans/models/soundLibrary';
 interface ButtonProps
   extends Pick<
     React.ButtonHTMLAttributes<HTMLButtonElement>,
-    'className' | 'style' | 'id' | 'children'
+    'className' | 'style' | 'id' | 'children' | 'disabled'
   > {
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => boolean | void;
   sound?: string;
@@ -39,6 +39,7 @@ class Button extends React.Component<ButtonProps> {
         id={this.props.id}
         className={className}
         style={this.props.style}
+        disabled={this.props.disabled}
         onClick={this.onClick}
       >
         {this.props.children}

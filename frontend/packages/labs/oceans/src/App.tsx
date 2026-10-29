@@ -19,8 +19,13 @@ export interface OceansLabProps {
   appMode?: AppModeValue;
   /** Guide key for the on-screen guide sequence (e.g. 'K5'). */
   guides?: string;
-  /** BCP-47 locale for text-to-speech (e.g. 'en'). */
+  /** BCP-47 locale that overrides the language guides are spoken in. */
   textToSpeechLocale?: string;
+  /**
+   * BCP-47 language of the text the lab shows (e.g. 'es-MX').  Guides are
+   * spoken in it.  Defaults to English, the lab's built-in strings.
+   */
+  locale?: string;
   /** Called when the user advances past the current activity. */
   onContinue?: () => void;
 }
@@ -34,6 +39,7 @@ export default function OceansLab({
   appMode = AppMode.FishVTrash,
   guides,
   textToSpeechLocale,
+  locale,
   onContinue,
 }: OceansLabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,6 +69,7 @@ export default function OceansLab({
       appMode,
       guides,
       textToSpeechLocale,
+      locale,
       onContinue: stableOnContinue,
       canvas: canvasRef.current as HTMLCanvasElement,
       backgroundCanvas: backgroundCanvasRef.current as HTMLCanvasElement,
@@ -74,7 +81,7 @@ export default function OceansLab({
       sounds.stopAllAudio();
       stopUIRerender();
     };
-  }, [appMode, guides, textToSpeechLocale, stableOnContinue]);
+  }, [appMode, guides, textToSpeechLocale, locale, stableOnContinue]);
 
   // 16:9 responsive wrapper — padding-top 56.25% creates the aspect-ratio box.
   // Canvas JS resolution is set to 1024×576 by initAll; CSS width/height 100%

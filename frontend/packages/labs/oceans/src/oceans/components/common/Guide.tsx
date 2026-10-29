@@ -10,20 +10,20 @@ import fingerClickIcon2 from '@/assets/images/finger-click-icon-2.svg';
 import Button from '@/oceans/components/common/Button';
 import I18n from '@/oceans/i18n';
 import guide from '@/oceans/models/guide';
+import type {GuideEntry} from '@/oceans/models/guideTypes';
 import soundLibrary from '@/oceans/models/soundLibrary';
 import {getState, setState} from '@/oceans/state';
-import {
-  startTextToSpeech,
-  stopTextToSpeech,
-  hasTextToSpeechVoices,
-} from '@/utils/TextToSpeech';
+import {cancel as cancelSpeech, speak} from '@/utils/speech';
 
-export const stopTypingSounds = () => {
-  const state = getState();
-  if (state.guideTypingTimer) {
-    clearInterval(state.guideTypingTimer as ReturnType<typeof setInterval>);
-    setState({guideTypingTimer: undefined}, {skipCallback: true});
-  }
+/**
+ * Whether the browser will let the page speak yet.  Speech, like audio, is
+ * blocked until the user has interacted with the page.
+ */
+const pageHasUserActivation = (gestureSeen: boolean): boolean => {
+  const activation = (
+    navigator as Navigator & {userActivation?: {hasBeenActive: boolean}}
+  ).userActivation;
+  return activation ? activation.hasBeenActive : gestureSeen;
 };
 
 /**
@@ -74,8 +74,42 @@ class Guide extends React.Component<Record<string, never>> {
   lastFocusedGuideId: string | null = null;
   /** Guide whose typing animation was skipped by a tap; its full text shows. */
   skippedGuideId: string | null = null;
+  /** Guide that speech was last started (or attempted) for. */
+  spokenGuideId: string | null = null;
+  /** Fallback for browsers without navigator.userActivation. */
+  gestureSeen = false;
+
+  componentDidMount() {
+    this.syncSpeech();
+  }
+
+  /** Speak each guide once when it appears; stop when it closes. */
+  syncSpeech() {
+    const currentGuide = guide.getCurrentGuide();
+    if (this.spokenGuideId && this.spokenGuideId !== currentGuide?.id) {
+      cancelSpeech();
+      this.spokenGuideId = null;
+    }
+    if (currentGuide && pageHasUserActivation(this.gestureSeen)) {
+      this.speakGuide(currentGuide);
+    }
+  }
+
+  /** Starts speech for `currentGuide` unless already tried; true if started. */
+  speakGuide(currentGuide: GuideEntry): boolean {
+    if (this.spokenGuideId === currentGuide.id) {
+      return false;
+    }
+    this.spokenGuideId = currentGuide.id;
+    const state = getState();
+    // `?tts=xx` still overrides the language, for testing.
+    const lang = state.textToSpeechLocale || state.locale || 'en';
+    return speak(currentGuide.textFn(state), lang);
+  }
 
   componentDidUpdate() {
+    this.syncSpeech();
+
     // Focus the dialog only when the guide changes, not on every re-render
     const currentGuide = guide.getCurrentGuide();
     const currentGuideId = currentGuide ? currentGuide.id : null;
@@ -109,26 +143,13 @@ class Guide extends React.Component<Record<string, never>> {
   };
 
   closeGuide = (guideId: string) => {
-    if (guide.dismissGuide(guideId) && getState().textToSpeechLocale) {
-      stopTextToSpeech();
-    }
+    guide.dismissGuide(guideId);
   };
 
   onGuideClick = (event?: React.MouseEvent) => {
     const state = getState();
     const currentGuide = guide.getCurrentGuide();
-
-    if (this.attemptTextToSpeechTextToSpeech(true)) {
-      // This click started text to speech.
-      setState(
-        {
-          hasTextToSpeechStartedByClick: true,
-          textToSpeechCurrentGuide: currentGuide,
-        },
-        {skipCallback: true},
-      );
-      return;
-    }
+    this.gestureSeen = true;
 
     // Make sure we don't try and dismiss a guide if it's not modal.
     if (!currentGuide || currentGuide.noDimBackground) {
@@ -147,6 +168,11 @@ class Guide extends React.Component<Record<string, never>> {
       return;
     }
 
+    // If speech was waiting for the user's first tap, this tap starts it.
+    if (this.speakGuide(currentGuide)) {
+      return;
+    }
+
     // While the text is still typing, a tap shows all of it at once.
     if (!state.guideShowing) {
       this.skippedGuideId = currentGuide.id;
@@ -160,50 +186,8 @@ class Guide extends React.Component<Record<string, never>> {
     }
 
     if (guide.dismissCurrentGuide()) {
-      if (state.textToSpeechLocale) {
-        stopTextToSpeech();
-      }
       soundLibrary.playSound('other');
     }
-  };
-
-  // Called from both the guide click handler and the render method, and
-  // attempts to play text to speech if needed.  Returns true if it believes
-  // it started text to speech.
-  attemptTextToSpeechTextToSpeech = (inClickHandler: boolean): boolean => {
-    const state = getState();
-    const currentGuide = guide.getCurrentGuide();
-
-    // Do nothing if text to speech is not desired or yet available.
-    if (!state.textToSpeechLocale || !hasTextToSpeechVoices()) {
-      return false;
-    }
-
-    // Do nothing if there is no current guide, or if we've already started
-    // text to speech for the current guide (which might have finished
-    // playing by now).
-    if (!currentGuide || state.textToSpeechCurrentGuide === currentGuide) {
-      return false;
-    }
-
-    // In this implementation, we want to start the first play of text to
-    // speech from a click handler, but all subsequent plays when we first
-    // render a new piece of text, rather than from a click handler.
-    // Therefore:
-    // If we are in a click handler, do nothing if we've already started
-    // text to speech from a click handler.
-    // If we are not in a click handler, do nothing if we've never started
-    // from a click handler before.
-    if (inClickHandler === state.hasTextToSpeechStartedByClick) {
-      return false;
-    }
-
-    // Make an attempt to play text to speech, and return whether we
-    // believe it has started.
-    return startTextToSpeech(
-      currentGuide.textFn(getState()),
-      state.textToSpeechLocale,
-    );
   };
 
   render() {
@@ -218,24 +202,6 @@ class Guide extends React.Component<Record<string, never>> {
       } else if (currentGuide.style === 'Info') {
         bgClassName = 'ocean-guide__bg ocean-guide__bg--info';
       }
-    }
-
-    // Start playing the typing sounds.
-    if (
-      !state.textToSpeechLocale &&
-      !state.guideShowing &&
-      !state.guideTypingTimer &&
-      currentGuide
-    ) {
-      const guideTypingTimer = setInterval(() => {
-        soundLibrary.playSound('no', 0.5);
-      }, 1000 / 10);
-      setState({guideTypingTimer}, {skipCallback: true});
-    }
-
-    if (this.attemptTextToSpeechTextToSpeech(false)) {
-      // This call started text to speech.
-      setState({textToSpeechCurrentGuide: currentGuide}, {skipCallback: true});
     }
 
     const renderClickToContinueReminder =

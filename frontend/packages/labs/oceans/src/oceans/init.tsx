@@ -1,5 +1,7 @@
 import {createRoot, type Root} from 'react-dom/client';
 
+import {cancel as cancelSpeech} from '../utils/speech';
+
 import constants, {Modes, OCEANS_UI_CONTAINER_ID} from './constants';
 import I18n from './i18n';
 import modeHelpers from './modeHelpers';
@@ -23,7 +25,17 @@ export interface InitAllOptions {
   playSound: (id: string, options?: {volume?: number}) => void;
   registerSound: (descriptor: {id: string; mp3: string}) => void;
   i18n?: Record<string, (opts?: Record<string, unknown>) => string>;
+  /** BCP-47 language of the strings in `i18n` (used to speak guides). */
+  locale?: string;
 }
+
+/**
+ * The language of the text the lab will show.  Without translated strings
+ * the lab shows its built-in English.  With them, a host that doesn't say
+ * which language they're in is assumed to match the page's own language.
+ */
+const resolveLocale = (options: InitAllOptions): string =>
+  options.locale || (options.i18n ? document.documentElement.lang : '') || 'en';
 
 // Persist the React root and its container across re-renders.  We only
 // call createRoot when the container DOM element changes (component
@@ -57,6 +69,7 @@ export const initAll = function (options: InitAllOptions): void {
   setInitialState({
     currentMode: Modes.Loading,
     ...options,
+    locale: resolveLocale(options),
   });
 
   // Initialize our first model.
@@ -74,6 +87,7 @@ export const initAll = function (options: InitAllOptions): void {
 };
 
 export const stopUIRerender = (): void => {
+  cancelSpeech();
   clearInterval(getState().guideTypingTimer);
   setState({guideTypingTimer: undefined}, {skipCallback: true});
   stopRender();

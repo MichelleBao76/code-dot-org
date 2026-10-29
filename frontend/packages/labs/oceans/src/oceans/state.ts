@@ -1,7 +1,6 @@
 import type KNNTrainer from '../utils/KNNTrainer';
 import type SVMTrainer from '../utils/SVMTrainer';
 
-import type {GuideEntry} from './models/guideTypes';
 import type {OceanObject} from './OceanObject';
 
 /**
@@ -79,10 +78,10 @@ export interface State {
   guideTypingTimer: ReturnType<typeof setTimeout> | undefined;
   showConfirmationDialog: boolean;
   confirmationDialogOnYes: (() => void) | null;
+  /** Overrides the speech language when set (the `?tts=` URL parameter). */
   textToSpeechLocale: string | undefined;
-  hasTextToSpeechStartedByClick: boolean;
-  /** Stores the guide object for which TTS has been started (or undefined). */
-  textToSpeechCurrentGuide: GuideEntry | null | undefined;
+  /** BCP-47 language of the text the lab shows; guides are spoken in it. */
+  locale: string;
   /** Optional guide sequence key (e.g. 'K5') selecting which guide set to show. */
   guides: string | undefined;
   /** Word fish slots per lane index; null means the slot is unfilled. */
@@ -150,8 +149,7 @@ const initialState: State = {
   showConfirmationDialog: false,
   confirmationDialogOnYes: null,
   textToSpeechLocale: undefined,
-  hasTextToSpeechStartedByClick: false,
-  textToSpeechCurrentGuide: undefined,
+  locale: 'en',
   guides: undefined,
   wordFish: null,
   fishCount: 0,

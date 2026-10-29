@@ -30,6 +30,7 @@ import {QueryClientProvider} from '@code-dot-org/core/api';
 
 import StudioFooter from '@/components/footer';
 import SiteHeader from '@/components/header';
+import HomeScreenBanner from '@/components/HomeScreenBanner';
 import {
   fetchAuthOutcome,
   primeCsrfToken,
@@ -86,6 +87,7 @@ function RootContent() {
   return (
     <>
       <SiteHeader />
+      <HomeScreenBanner />
       {/* Reserve ~a viewport for the route content so the footer starts at/below
           the fold while a route's chunk or data loads, and doesn't jump down when
           the content arrives. Layout-level concern shared by every async route;
@@ -150,7 +152,10 @@ export const Route = createRootRoute({
   head: () => ({
     // Default document title; leaf routes override it via their own `head`.
     // HeadContent restores this when navigating back to a title-less route.
-    meta: [{title: 'CodeAI'}],
+    meta: [
+      {title: 'CodeAI'},
+      {name: 'apple-mobile-web-app-capable', content: 'yes'},
+    ],
     links: [
       {
         rel: 'icon',

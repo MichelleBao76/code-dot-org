@@ -1,10 +1,16 @@
 import {useState} from 'react';
 import {createRoot} from 'react-dom/client';
 
+import '@code-dot-org/component-library-styles/fontVariables.css';
+import '@code-dot-org/component-library-styles/primitiveColors.css';
+import '@code-dot-org/component-library-styles/colors.css';
+import '@code-dot-org/component-library-styles/shapeAndSpacingVariables.css';
 import {initializeCore} from '@code-dot-org/core';
 import {localizationPlugin} from '@code-dot-org/core/plugins/localization';
+import {injectFontAwesome} from '@code-dot-org/fonts';
 
 import OceansLab from './App';
+import HomeScreenBanner from './HomeScreenBanner';
 import {AppMode, type AppModeValue} from './oceans/constants';
 // Frame sizing (proportional font-size + 16:9 width clamp).  The studio host
 // opts into this same file; the dev harness must too, or it renders at a flat
@@ -12,6 +18,7 @@ import {AppMode, type AppModeValue} from './oceans/constants';
 import './oceans/styles/oceansLab.css';
 
 initializeCore({plugins: [localizationPlugin]});
+injectFontAwesome();
 
 /** All playable modes in sequence, used by the mode picker and onContinue handler. */
 const APP_MODES: {id: AppModeValue; label: string}[] = [
@@ -65,6 +72,9 @@ function DemoShell() {
         fontFamily: 'sans-serif',
       }}
     >
+      <HomeScreenBanner
+        preview={import.meta.env.DEV && params.get('homeScreenPreview') === '1'}
+      />
       {/* Mode picker — kept small so it doesn't affect the lab's dimensions */}
       <div
         style={{

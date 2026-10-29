@@ -2225,7 +2225,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@code-dot-org/oceans-lab@workspace:packages/labs/oceans"
   dependencies:
+    "@code-dot-org/component-library": "workspace:*"
+    "@code-dot-org/component-library-styles": "workspace:*"
     "@code-dot-org/core": "workspace:*"
+    "@code-dot-org/fonts": "workspace:*"
     "@code-dot-org/lint-config": "workspace:*"
     "@code-dot-org/playwright-support": "workspace:*"
     "@code-dot-org/redactable-markdown": "npm:^0.4.0"

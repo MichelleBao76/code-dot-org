@@ -36,6 +36,28 @@ const GUIDE_STYLE_CLASS: Record<string, string> = {
   Center: 'ocean-guide--center',
 };
 
+/**
+ * The enabled lab button under a tap on the guide's dimmed background, if
+ * any.  Taps on the guide's own text box never reach the lab underneath.
+ */
+const findButtonUnderScrim = (event: React.MouseEvent): HTMLElement | null => {
+  const elements = document.elementsFromPoint(event.clientX, event.clientY);
+  if (elements[0]?.closest('.guide-dialog')) {
+    return null;
+  }
+  for (const element of elements) {
+    const button = element.closest<HTMLElement>('.ocean-button');
+    if (
+      button &&
+      !button.closest('.guide-dialog') &&
+      button.getAttribute('aria-disabled') !== 'true'
+    ) {
+      return button;
+    }
+  }
+  return null;
+};
+
 /** Map a `GuideEntry.arrow` value to its modifier class name. */
 const GUIDE_ARROW_CLASS: Record<string, string> = {
   BotRight: 'ocean-guide__arrow--bot-right',
@@ -50,6 +72,8 @@ const GUIDE_ARROW_CLASS: Record<string, string> = {
 class Guide extends React.Component<Record<string, never>> {
   guideDialogRef = React.createRef<HTMLDivElement>();
   lastFocusedGuideId: string | null = null;
+  /** Guide whose typing animation was skipped by a tap; its full text shows. */
+  skippedGuideId: string | null = null;
 
   componentDidUpdate() {
     // Focus the dialog only when the guide changes, not on every re-render
@@ -84,7 +108,13 @@ class Guide extends React.Component<Record<string, never>> {
     }
   };
 
-  onGuideClick = () => {
+  closeGuide = (guideId: string) => {
+    if (guide.dismissGuide(guideId) && getState().textToSpeechLocale) {
+      stopTextToSpeech();
+    }
+  };
+
+  onGuideClick = (event?: React.MouseEvent) => {
     const state = getState();
     const currentGuide = guide.getCurrentGuide();
 
@@ -97,20 +127,43 @@ class Guide extends React.Component<Record<string, never>> {
         },
         {skipCallback: true},
       );
-    } else {
-      // Make sure we don't try and dismiss a guide if it's
-      // not modal.
-      if (currentGuide && !currentGuide.noDimBackground) {
-        // This click did not start text to speech, so attempt
-        // to dismiss the guide.
-        const dismissed = guide.dismissCurrentGuide();
-        if (dismissed) {
-          if (state.textToSpeechLocale) {
-            stopTextToSpeech();
-          }
-          soundLibrary.playSound('other');
-        }
+      return;
+    }
+
+    // Make sure we don't try and dismiss a guide if it's not modal.
+    if (!currentGuide || currentGuide.noDimBackground) {
+      return;
+    }
+
+    // A tap on a lab button showing through the dimmed background closes
+    // the guide and presses that button, so one tap is enough to move on.
+    const buttonUnderTap =
+      event && currentGuide.style !== 'Info'
+        ? findButtonUnderScrim(event)
+        : null;
+    if (buttonUnderTap) {
+      this.closeGuide(currentGuide.id);
+      buttonUnderTap.click();
+      return;
+    }
+
+    // While the text is still typing, a tap shows all of it at once.
+    if (!state.guideShowing) {
+      this.skippedGuideId = currentGuide.id;
+      this.onTypingDone();
+      return;
+    }
+
+    // "Did You Know" boxes close only from their own Continue button.
+    if (currentGuide.style === 'Info') {
+      return;
+    }
+
+    if (guide.dismissCurrentGuide()) {
+      if (state.textToSpeechLocale) {
+        stopTextToSpeech();
       }
+      soundLibrary.playSound('other');
     }
   };
 
@@ -210,6 +263,9 @@ class Guide extends React.Component<Record<string, never>> {
     // literals from guidesHoc / guidesK5; pass through verbatim.
     const imageStyle = currentGuide?.imageStyle;
 
+    const typingSkipped =
+      !!currentGuide && this.skippedGuideId === currentGuide.id;
+
     return (
       <div>
         {currentGuide && currentGuide.image && (
@@ -241,16 +297,21 @@ class Guide extends React.Component<Record<string, never>> {
                   )}
 
                   {/* Visible Typist animation for sighted users */}
-                  <div className="ocean-guide__typing-text" aria-hidden="true">
-                    <Typist
-                      avgTypingDelay={35}
-                      stdTypingDelay={15}
-                      cursor={{show: false}}
-                      onTypingDone={this.onTypingDone}
+                  {!typingSkipped && (
+                    <div
+                      className="ocean-guide__typing-text"
+                      aria-hidden="true"
                     >
-                      {currentGuide.textFn(getState())}
-                    </Typist>
-                  </div>
+                      <Typist
+                        avgTypingDelay={35}
+                        stdTypingDelay={15}
+                        cursor={{show: false}}
+                        onTypingDone={this.onTypingDone}
+                      >
+                        {currentGuide.textFn(getState())}
+                      </Typist>
+                    </div>
+                  )}
 
                   <div
                     className={
@@ -264,7 +325,11 @@ class Guide extends React.Component<Record<string, never>> {
                       aria-live="polite"
                       tabIndex={0}
                       onKeyDown={this.onGuideKeyDown}
-                      className="ocean-guide__final-text"
+                      className={
+                        typingSkipped
+                          ? 'ocean-guide__final-text ocean-guide__final-text--shown'
+                          : 'ocean-guide__final-text'
+                      }
                     >
                       {currentGuide.textFn(getState())}
                     </div>
@@ -286,7 +351,11 @@ class Guide extends React.Component<Record<string, never>> {
                   {currentGuide.style === 'Info' && (
                     <Button
                       className="ocean-guide__info-button"
-                      onClick={() => {}}
+                      onClick={event => {
+                        // Keep the tap from also reaching the background.
+                        event.stopPropagation();
+                        this.closeGuide(currentGuide.id);
+                      }}
                     >
                       {I18n.t('continue')}
                     </Button>

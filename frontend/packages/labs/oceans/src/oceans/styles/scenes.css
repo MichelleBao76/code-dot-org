@@ -113,6 +113,59 @@
 .ocean-button[aria-disabled='true'] {
   cursor: not-allowed;
   opacity: 0.5;
+  box-shadow: none;
+}
+
+/* Interaction cues: buttons sit slightly raised, lift on hover, press down
+ * when tapped, and show a clear ring for keyboard focus.  `translate` is used
+ * instead of `transform` so it composes with buttons already positioned by a
+ * transform (e.g. the guide's Continue button). */
+.ocean-button {
+  box-shadow:
+    0 2px 0 rgb(0 0 0 / 20%),
+    0 4px 10px rgb(0 0 0 / 18%);
+  transition:
+    translate 80ms ease-out,
+    box-shadow 80ms ease-out;
+}
+
+.ocean-button:focus-visible {
+  outline: 3px solid var(--ocean-color-neon-blue);
+  outline-offset: 2px;
+}
+
+.ocean-button:not([aria-disabled='true']):active {
+  translate: 0 2px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 25%);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ocean-button:not([aria-disabled='true']):hover {
+    translate: 0 -1px;
+    box-shadow:
+      0 3px 0 rgb(0 0 0 / 20%),
+      0 6px 14px rgb(0 0 0 / 22%);
+  }
+
+  .ocean-button:not([aria-disabled='true']):hover:active {
+    translate: 0 2px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 25%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ocean-button {
+    transition: none;
+  }
+}
+
+/* Same keyboard focus ring for the lab's icon buttons. */
+.ocean-erase-button:focus-visible,
+.ocean-info-icon-container:focus-visible,
+.ocean-toggle-icon:focus-visible,
+.ocean-media-control:focus-visible {
+  outline: 3px solid var(--ocean-color-neon-blue);
+  outline-offset: 2px;
 }
 
 .ocean-button--continue {
@@ -680,6 +733,11 @@
 .ocean-guide__final-text {
   padding: 20px;
   color: rgb(0 0 0 / 0%);
+}
+
+/* A tap during typing skips the animation and shows the full text here. */
+.ocean-guide__final-text--shown {
+  color: inherit;
 }
 
 .ocean-guide__continue-reminder {

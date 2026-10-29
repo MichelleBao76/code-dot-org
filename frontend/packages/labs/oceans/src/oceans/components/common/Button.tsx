@@ -23,7 +23,14 @@ class Button extends React.Component<ButtonProps> {
     if (this.props.disabled) {
       return;
     }
-    guide.dismissCurrentGuide();
+    const currentGuide = guide.getCurrentGuide();
+    if (currentGuide?.noDimBackground) {
+      // Guides that point at a button close when it's pressed, even if their
+      // text is still typing; otherwise they stay up and block later guides.
+      guide.dismissGuide(currentGuide.id);
+    } else {
+      guide.dismissCurrentGuide();
+    }
     const clickReturnValue = this.props.onClick && this.props.onClick(event);
 
     if (clickReturnValue !== false) {

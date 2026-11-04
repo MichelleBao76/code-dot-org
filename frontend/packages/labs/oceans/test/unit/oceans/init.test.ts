@@ -17,6 +17,8 @@ vi.mock('@/oceans/models/soundLibrary', () => ({
   default: {injectSoundAPIs: vi.fn(), loadSounds: vi.fn()},
 }));
 vi.mock('@/oceans/ui', () => ({default: () => null}));
+const {cancelSpeech} = vi.hoisted(() => ({cancelSpeech: vi.fn()}));
+vi.mock('@/utils/speech', () => ({cancel: cancelSpeech}));
 
 beforeEach(() => {
   resetState();
@@ -54,5 +56,27 @@ describe('stopUIRerender', () => {
 
     expect(clearSpy).toHaveBeenCalledWith(timerId);
     expect(getState().guideTypingTimer).toBeUndefined();
+  });
+});
+
+describe('initAll speech cleanup', () => {
+  it('cancels speech when initializing a new activity or locale', async () => {
+    const {initAll} = await import('@/oceans/init');
+    cancelSpeech.mockClear();
+    const canvas = document.createElement('canvas');
+    const backgroundCanvas = document.createElement('canvas');
+
+    initAll({
+      canvas,
+      backgroundCanvas,
+      appMode: 'fishvtrash',
+      locale: 'fr',
+      textToSpeechLocale: 'fr',
+      playSound: vi.fn(),
+      registerSound: vi.fn(),
+    });
+
+    expect(cancelSpeech).toHaveBeenCalled();
+    expect(getState().locale).toBe('fr');
   });
 });

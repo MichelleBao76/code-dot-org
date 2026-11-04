@@ -76,6 +76,8 @@ class Guide extends React.Component<Record<string, never>> {
   skippedGuideId: string | null = null;
   /** Guide that speech was last started (or attempted) for. */
   spokenGuideId: string | null = null;
+  /** Guide whose speech request is active, including while a voice is loading. */
+  speechGuideId: string | null = null;
   /** Fallback for browsers without navigator.userActivation. */
   gestureSeen = false;
 
@@ -89,6 +91,7 @@ class Guide extends React.Component<Record<string, never>> {
     if (this.spokenGuideId && this.spokenGuideId !== currentGuide?.id) {
       cancelSpeech();
       this.spokenGuideId = null;
+      this.speechGuideId = null;
     }
     if (currentGuide && pageHasUserActivation(this.gestureSeen)) {
       this.speakGuide(currentGuide);
@@ -104,7 +107,20 @@ class Guide extends React.Component<Record<string, never>> {
     const state = getState();
     // `?tts=xx` still overrides the language, for testing.
     const lang = state.textToSpeechLocale || state.locale || 'en';
-    return speak(currentGuide.textFn(state), lang);
+    const started = speak(currentGuide.textFn(state), lang, {
+      onStart: () => {
+        if (this.spokenGuideId === currentGuide.id) {
+          this.speechGuideId = currentGuide.id;
+        }
+      },
+      onEnd: () => {
+        if (this.spokenGuideId === currentGuide.id) {
+          this.speechGuideId = null;
+        }
+      },
+    });
+    this.speechGuideId = started ? currentGuide.id : null;
+    return started;
   }
 
   componentDidUpdate() {
@@ -143,6 +159,8 @@ class Guide extends React.Component<Record<string, never>> {
   };
 
   closeGuide = (guideId: string) => {
+    cancelSpeech();
+    this.speechGuideId = null;
     guide.dismissGuide(guideId);
   };
 
@@ -153,6 +171,20 @@ class Guide extends React.Component<Record<string, never>> {
 
     // Make sure we don't try and dismiss a guide if it's not modal.
     if (!currentGuide || currentGuide.noDimBackground) {
+      return;
+    }
+
+    // While narration is active (or waiting for a voice), a click stops it
+    // and reveals the complete bubble without advancing to another guide.
+    if (this.speechGuideId === currentGuide.id) {
+      cancelSpeech();
+      this.speechGuideId = null;
+      this.skippedGuideId = currentGuide.id;
+      if (!state.guideShowing) {
+        this.onTypingDone();
+      } else {
+        this.forceUpdate();
+      }
       return;
     }
 
@@ -186,6 +218,8 @@ class Guide extends React.Component<Record<string, never>> {
     }
 
     if (guide.dismissCurrentGuide()) {
+      cancelSpeech();
+      this.speechGuideId = null;
       soundLibrary.playSound('other');
     }
   };

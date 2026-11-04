@@ -55,6 +55,9 @@ let uiContainer: HTMLElement | null = null;
 export const initAll = function (options: InitAllOptions): void {
   const {canvas, backgroundCanvas} = options;
 
+  // A new activity or locale invalidates any utterance from the old state.
+  cancelSpeech();
+
   canvas.width = backgroundCanvas.width = constants.canvasWidth;
   canvas.height = backgroundCanvas.height = constants.canvasHeight;
 

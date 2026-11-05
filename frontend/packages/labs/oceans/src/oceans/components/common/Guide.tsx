@@ -13,6 +13,7 @@ import guide from '@/oceans/models/guide';
 import type {GuideEntry} from '@/oceans/models/guideTypes';
 import soundLibrary from '@/oceans/models/soundLibrary';
 import {getState, setState} from '@/oceans/state';
+import {findGuideClip, playSynced, type SyncedAudio} from '@/utils/guideAudio';
 import {cancel as cancelSpeech, speak} from '@/utils/speech';
 
 /**
@@ -78,6 +79,12 @@ class Guide extends React.Component<Record<string, never>> {
   spokenGuideId: string | null = null;
   /** Guide whose speech request is active, including while a voice is loading. */
   speechGuideId: string | null = null;
+  /** Prerecorded narration currently playing, if any. */
+  activeClip: SyncedAudio | null = null;
+  /** Guide whose text is being revealed in step with its audio clip. */
+  syncedGuideId: string | null = null;
+  /** How many characters of the synced guide are showing. */
+  syncedChars = 0;
   /** Fallback for browsers without navigator.userActivation. */
   gestureSeen = false;
   typingSoundGuideId: string | null = null;
@@ -92,22 +99,30 @@ class Guide extends React.Component<Record<string, never>> {
     cancelSpeech();
   }
 
+  componentWillUnmount() {
+    this.stopNarration();
+  }
+
+  /** Stops whichever narration is active, recorded or spoken. */
+  stopNarration() {
+    cancelSpeech();
+    this.activeClip?.stop();
+    this.activeClip = null;
+    this.speechGuideId = null;
+  }
+
   /** Speak each guide once when it appears; stop when it closes. */
   syncSpeech() {
     const currentGuide = guide.getCurrentGuide();
-    this.syncTypingSound(currentGuide);
-    if (!getState().textToSpeechEnabled) {
-      if (this.spokenGuideId || this.speechGuideId) {
-        cancelSpeech();
-      }
+    if (this.spokenGuideId && this.spokenGuideId !== currentGuide?.id) {
+      this.stopNarration();
       this.spokenGuideId = null;
       this.speechGuideId = null;
       return;
     }
     if (this.spokenGuideId && this.spokenGuideId !== currentGuide?.id) {
-      cancelSpeech();
+      this.stopNarration();
       this.spokenGuideId = null;
-      this.speechGuideId = null;
     }
     if (currentGuide && pageHasUserActivation(this.gestureSeen)) {
       this.speakGuide(currentGuide);
@@ -160,7 +175,53 @@ class Guide extends React.Component<Record<string, never>> {
     const state = getState();
     // `?tts=xx` still overrides the language, for testing.
     const lang = state.textToSpeechLocale || state.locale || 'en';
-    const started = speak(currentGuide.textFn(state), lang, {
+    const clip = findGuideClip(currentGuide.id, lang);
+    if (clip) {
+      this.playClip(currentGuide, clip, lang);
+      return true;
+    }
+    return this.speakWithVoice(currentGuide, lang);
+  }
+
+  /** Plays a guide's clip, revealing its text in step with the voice. */
+  playClip(currentGuide: GuideEntry, url: string, lang: string) {
+    const text = currentGuide.textFn(getState());
+    // Text that has already finished typing stays on screen as it is.
+    const syncText = !getState().guideShowing;
+    this.speechGuideId = currentGuide.id;
+    this.syncedGuideId = syncText ? currentGuide.id : null;
+    this.syncedChars = 0;
+    this.activeClip = playSynced(url, {
+      onProgress: fraction => {
+        const chars = Math.floor(fraction * text.length);
+        if (syncText && chars !== this.syncedChars) {
+          this.syncedChars = chars;
+          this.forceUpdate();
+        }
+      },
+      onEnd: () => {
+        this.activeClip = null;
+        this.speechGuideId = null;
+        if (!getState().guideShowing) {
+          this.onTypingDone();
+        }
+      },
+      onFail: () => {
+        // Never leave the box empty: go back to typed text and Web Speech.
+        this.activeClip = null;
+        this.syncedGuideId = null;
+        this.speakWithVoice(currentGuide, lang);
+        this.forceUpdate();
+      },
+    });
+    if (syncText) {
+      this.forceUpdate();
+    }
+  }
+
+  /** Speaks a guide with Web Speech; true if speech started. */
+  speakWithVoice(currentGuide: GuideEntry, lang: string): boolean {
+    const started = speak(currentGuide.textFn(getState()), lang, {
       onStart: () => {
         if (this.spokenGuideId === currentGuide.id) {
           this.speechGuideId = currentGuide.id;
@@ -210,8 +271,7 @@ class Guide extends React.Component<Record<string, never>> {
   };
 
   closeGuide = (guideId: string) => {
-    cancelSpeech();
-    this.speechGuideId = null;
+    this.stopNarration();
     guide.dismissGuide(guideId);
   };
 
@@ -228,8 +288,7 @@ class Guide extends React.Component<Record<string, never>> {
     // While narration is active (or waiting for a voice), a click stops it
     // and reveals the complete bubble without advancing to another guide.
     if (this.speechGuideId === currentGuide.id) {
-      cancelSpeech();
-      this.speechGuideId = null;
+      this.stopNarration();
       this.skippedGuideId = currentGuide.id;
       if (!state.guideShowing) {
         this.onTypingDone();
@@ -269,8 +328,7 @@ class Guide extends React.Component<Record<string, never>> {
     }
 
     if (guide.dismissCurrentGuide()) {
-      cancelSpeech();
-      this.speechGuideId = null;
+      this.stopNarration();
       soundLibrary.playSound('other');
     }
   };
@@ -316,6 +374,7 @@ class Guide extends React.Component<Record<string, never>> {
 
     const typingSkipped =
       !!currentGuide && this.skippedGuideId === currentGuide.id;
+    const textSynced = !!currentGuide && this.syncedGuideId === currentGuide.id;
 
     return (
       <div>
@@ -353,14 +412,20 @@ class Guide extends React.Component<Record<string, never>> {
                       className="ocean-guide__typing-text"
                       aria-hidden="true"
                     >
-                      <Typist
-                        avgTypingDelay={35}
-                        stdTypingDelay={15}
-                        cursor={{show: false}}
-                        onTypingDone={this.onTypingDone}
-                      >
-                        {currentGuide.textFn(getState())}
-                      </Typist>
+                      {textSynced ? (
+                        currentGuide
+                          .textFn(getState())
+                          .slice(0, this.syncedChars)
+                      ) : (
+                        <Typist
+                          avgTypingDelay={35}
+                          stdTypingDelay={15}
+                          cursor={{show: false}}
+                          onTypingDone={this.onTypingDone}
+                        >
+                          {currentGuide.textFn(getState())}
+                        </Typist>
+                      )}
                     </div>
                   )}
 

@@ -3,7 +3,11 @@ import type {ReactNode} from 'react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  currentGuide: null as null | {id: string; textFn: () => string; style?: string},
+  currentGuide: null as null | {
+    id: string;
+    textFn: () => string;
+    style?: string;
+  },
   speak: vi.fn(),
   cancel: vi.fn(),
   dismissCurrentGuide: vi.fn(),
@@ -80,7 +84,9 @@ describe('Guide narration skip', () => {
       guideTypingTimer: undefined,
     });
     mocks.getState.mockReturnValue(mocks.state);
-    mocks.setState.mockImplementation(patch => Object.assign(mocks.state, patch));
+    mocks.setState.mockImplementation(patch =>
+      Object.assign(mocks.state, patch),
+    );
     mocks.speak.mockReturnValue(true);
     mocks.dismissCurrentGuide.mockReturnValue(false);
   });
@@ -94,7 +100,10 @@ describe('Guide narration skip', () => {
     expect(mocks.speak).toHaveBeenCalledWith(
       'Localized guide text',
       'es-MX',
-      expect.objectContaining({onStart: expect.any(Function), onEnd: expect.any(Function)}),
+      expect.objectContaining({
+        onStart: expect.any(Function),
+        onEnd: expect.any(Function),
+      }),
     );
 
     // The next click skips active speech and the text animation.
@@ -106,8 +115,9 @@ describe('Guide narration skip', () => {
     });
     rerender(<Guide />);
 
-    expect(container.querySelector('.ocean-guide__final-text--shown')?.textContent)
-      .toContain('Localized guide text');
+    expect(
+      container.querySelector('.ocean-guide__final-text--shown')?.textContent,
+    ).toContain('Localized guide text');
     expect(mocks.dismissCurrentGuide).not.toHaveBeenCalled();
 
     // A later click can now advance the completed guide.

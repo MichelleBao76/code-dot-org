@@ -80,6 +80,8 @@ export interface State {
   confirmationDialogOnYes: (() => void) | null;
   /** Overrides the speech language when set (the `?tts=` URL parameter). */
   textToSpeechLocale: string | undefined;
+  /** Whether guide narration is enabled. */
+  textToSpeechEnabled: boolean;
   /** BCP-47 language of the text the lab shows; guides are spoken in it. */
   locale: string;
   /** Optional guide sequence key (e.g. 'K5') selecting which guide set to show. */
@@ -149,6 +151,7 @@ const initialState: State = {
   showConfirmationDialog: false,
   confirmationDialogOnYes: null,
   textToSpeechLocale: undefined,
+  textToSpeechEnabled: true,
   locale: 'en',
   guides: undefined,
   wordFish: null,

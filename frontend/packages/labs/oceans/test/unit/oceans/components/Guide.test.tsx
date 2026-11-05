@@ -9,9 +9,11 @@ const mocks = vi.hoisted(() => ({
   dismissCurrentGuide: vi.fn(),
   dismissGuide: vi.fn(),
   setState: vi.fn(),
+  playSound: vi.fn(),
   state: {
     locale: 'en',
     textToSpeechLocale: undefined,
+    textToSpeechEnabled: true,
     guideShowing: false,
     guideTypingTimer: undefined,
   },
@@ -34,11 +36,29 @@ vi.mock('@/oceans/state', () => ({
   setState: mocks.setState,
 }));
 vi.mock('@/oceans/models/soundLibrary', () => ({
-  default: {playSound: vi.fn()},
+  default: {playSound: mocks.playSound},
 }));
 vi.mock('@/oceans/i18n', () => ({default: {t: (key: string) => key}}));
 vi.mock('react-typist', () => ({
-  default: ({children}: {children: ReactNode}) => <>{children}</>,
+  default: ({
+    children,
+    onTypingDone,
+  }: {
+    children: ReactNode;
+    onTypingDone?: () => void;
+  }) => (
+    <>
+      {children}
+      <button
+        type="button"
+        data-testid="typing-complete"
+        onClick={event => {
+          event.stopPropagation();
+          onTypingDone?.();
+        }}
+      />
+    </>
+  ),
 }));
 
 import Guide from '@/oceans/components/common/Guide';
@@ -55,12 +75,14 @@ describe('Guide narration skip', () => {
     Object.assign(mocks.state, {
       locale: 'es-MX',
       textToSpeechLocale: undefined,
+      textToSpeechEnabled: true,
       guideShowing: false,
       guideTypingTimer: undefined,
     });
     mocks.getState.mockReturnValue(mocks.state);
     mocks.setState.mockImplementation(patch => Object.assign(mocks.state, patch));
     mocks.speak.mockReturnValue(true);
+    mocks.dismissCurrentGuide.mockReturnValue(false);
   });
 
   it('stops narration, ends typing, reveals all text, and keeps the guide open', () => {
@@ -105,5 +127,42 @@ describe('Guide narration skip', () => {
 
     expect(mocks.cancel).toHaveBeenCalledTimes(1);
     expect(mocks.dismissGuide).toHaveBeenCalledWith('info-guide');
+  });
+
+  it('keeps guide clicks working when narration is disabled', () => {
+    mocks.state.textToSpeechEnabled = false;
+    mocks.state.guideShowing = true;
+    mocks.dismissCurrentGuide.mockReturnValue(true);
+    const {container} = render(<Guide />);
+
+    fireEvent.click(container.querySelector('#uitest-dismiss-guide')!);
+
+    expect(mocks.speak).not.toHaveBeenCalled();
+    expect(mocks.dismissCurrentGuide).toHaveBeenCalledTimes(1);
+  });
+
+  it('plays the existing typing sound ten times per second when narration is off', () => {
+    mocks.state.textToSpeechEnabled = false;
+    vi.useFakeTimers();
+    try {
+      const {container} = render(<Guide />);
+      vi.advanceTimersByTime(300);
+
+      expect(mocks.playSound).toHaveBeenCalledTimes(3);
+      expect(mocks.playSound).toHaveBeenNthCalledWith(1, 'no', 0.5);
+      expect(mocks.playSound).toHaveBeenNthCalledWith(2, 'no', 0.5);
+      expect(mocks.playSound).toHaveBeenNthCalledWith(3, 'no', 0.5);
+
+      fireEvent.click(container.querySelector('[data-testid="typing-complete"]')!);
+      expect(mocks.playSound).toHaveBeenCalledTimes(3);
+      vi.advanceTimersByTime(300);
+      expect(mocks.playSound).toHaveBeenCalledTimes(3);
+      expect(mocks.setState).toHaveBeenCalledWith({
+        guideShowing: true,
+        guideTypingTimer: undefined,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

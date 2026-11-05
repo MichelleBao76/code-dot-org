@@ -80,6 +80,35 @@
   height: 100%;
 }
 
+.ocean-tts-toggle {
+  position: absolute;
+  z-index: 3;
+  top: 2%;
+  right: 20.5%;
+  width: 2.5%;
+  height: 6%;
+  min-width: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ocean-color-dark-grey);
+  color: white;
+  font: inherit;
+  font-size: 85%;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.ocean-tts-toggle:focus-visible {
+  outline: 3px solid var(--ocean-color-neon-blue);
+  outline-offset: 2px;
+}
+
+.ocean-tts-toggle:active {
+  translate: 0 2px;
+}
+
 .ocean-content {
   position: absolute;
   top: 0;

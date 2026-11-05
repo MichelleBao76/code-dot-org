@@ -80,14 +80,30 @@ class Guide extends React.Component<Record<string, never>> {
   speechGuideId: string | null = null;
   /** Fallback for browsers without navigator.userActivation. */
   gestureSeen = false;
+  typingSoundGuideId: string | null = null;
+  typingSoundTimer: ReturnType<typeof setInterval> | undefined;
 
   componentDidMount() {
     this.syncSpeech();
   }
 
+  componentWillUnmount() {
+    this.stopTypingSound();
+    cancelSpeech();
+  }
+
   /** Speak each guide once when it appears; stop when it closes. */
   syncSpeech() {
     const currentGuide = guide.getCurrentGuide();
+    this.syncTypingSound(currentGuide);
+    if (!getState().textToSpeechEnabled) {
+      if (this.spokenGuideId || this.speechGuideId) {
+        cancelSpeech();
+      }
+      this.spokenGuideId = null;
+      this.speechGuideId = null;
+      return;
+    }
     if (this.spokenGuideId && this.spokenGuideId !== currentGuide?.id) {
       cancelSpeech();
       this.spokenGuideId = null;
@@ -96,6 +112,43 @@ class Guide extends React.Component<Record<string, never>> {
     if (currentGuide && pageHasUserActivation(this.gestureSeen)) {
       this.speakGuide(currentGuide);
     }
+  }
+
+  syncTypingSound(currentGuide: GuideEntry | null) {
+    const state = getState();
+    if (
+      state.textToSpeechEnabled ||
+      state.guideShowing ||
+      !currentGuide
+    ) {
+      this.stopTypingSound();
+      return;
+    }
+    if (
+      this.typingSoundGuideId === currentGuide.id &&
+      this.typingSoundTimer !== undefined
+    ) {
+      return;
+    }
+    this.stopTypingSound();
+    this.typingSoundGuideId = currentGuide.id;
+    this.typingSoundTimer = setInterval(
+      () => soundLibrary.playSound('no', 0.5),
+      100,
+    );
+    setState({guideTypingTimer: this.typingSoundTimer});
+  }
+
+  stopTypingSound() {
+    const timer = this.typingSoundTimer ?? getState().guideTypingTimer;
+    if (timer !== undefined) {
+      clearInterval(timer);
+    }
+    this.typingSoundTimer = undefined;
+    if (getState().guideTypingTimer !== undefined) {
+      setState({guideTypingTimer: undefined}, {skipCallback: true});
+    }
+    this.typingSoundGuideId = null;
   }
 
   /** Starts speech for `currentGuide` unless already tried; true if started. */
@@ -144,12 +197,10 @@ class Guide extends React.Component<Record<string, never>> {
       this.lastFocusedGuideId = null;
     }
   }
-  onTypingDone() {
-    clearInterval(
-      getState().guideTypingTimer as ReturnType<typeof setInterval>,
-    );
+  onTypingDone = () => {
+    this.stopTypingSound();
     setState({guideShowing: true, guideTypingTimer: undefined});
-  }
+  };
 
   onGuideKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === ' ' || e.key === 'Enter' || e.key === 'Spacebar') {
@@ -201,7 +252,7 @@ class Guide extends React.Component<Record<string, never>> {
     }
 
     // If speech was waiting for the user's first tap, this tap starts it.
-    if (this.speakGuide(currentGuide)) {
+    if (state.textToSpeechEnabled && this.speakGuide(currentGuide)) {
       return;
     }
 

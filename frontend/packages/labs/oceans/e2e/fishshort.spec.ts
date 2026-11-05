@@ -25,6 +25,23 @@ test.describe('FishShort — words scene', () => {
     ).toBeVisible();
   });
 
+  test('read-aloud toggle changes state without blocking word selection', async ({
+    page,
+  }) => {
+    const oceans = new OceansPage(page);
+    await oceans.goto(AppMode.FishShort);
+    await oceans.waitForWordsScene();
+    const readAloud = page.getByRole('button', {name: 'Read aloud: On'});
+    await expect(readAloud).toHaveAttribute('aria-pressed', 'true');
+    await readAloud.click();
+    await expect(
+      page.getByRole('button', {name: 'Read aloud: Off'}),
+    ).toHaveAttribute('aria-pressed', 'false');
+
+    await page.getByRole('button', {name: 'Blue'}).click();
+    await oceans.waitForTrainingScene();
+  });
+
   test('clicking a word advances to training scene', async ({page}) => {
     const oceans = new OceansPage(page);
     await oceans.goto(AppMode.FishShort);

@@ -5,7 +5,10 @@ import loadingGif from '@/assets/images/loading.gif';
 import Button from '@/oceans/components/common/Button';
 import ConfirmationDialog from '@/oceans/components/common/ConfirmationDialog';
 import Guide from '@/oceans/components/common/Guide';
+import I18n from '@/oceans/i18n';
 import guide from '@/oceans/models/guide';
+import {getState, setState} from '@/oceans/state';
+import {cancel as cancelSpeech} from '@/utils/speech';
 
 interface BodyProps {
   children?: React.ReactNode;
@@ -28,6 +31,27 @@ class Body extends React.Component<BodyProps> {
           {this.props.children}
         </div>
         <Guide />
+        <button
+          type="button"
+          className="ocean-tts-toggle"
+          aria-label={I18n.t(
+            getState().textToSpeechEnabled ? 'readAloudOn' : 'readAloudOff',
+          )}
+          title={I18n.t(
+            getState().textToSpeechEnabled ? 'readAloudOn' : 'readAloudOff',
+          )}
+          aria-pressed={getState().textToSpeechEnabled}
+          onClick={event => {
+            event.stopPropagation();
+            const enabled = !getState().textToSpeechEnabled;
+            if (!enabled) {
+              cancelSpeech();
+            }
+            setState({textToSpeechEnabled: enabled});
+          }}
+        >
+          <span aria-hidden="true">{getState().textToSpeechEnabled ? '🔊' : '🔇'}</span>
+        </button>
       </div>
     );
   }

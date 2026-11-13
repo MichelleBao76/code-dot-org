@@ -13,9 +13,11 @@ const mocks = vi.hoisted(() => ({
   findGuideClip: vi.fn(),
   playSynced: vi.fn(),
   stop: vi.fn(),
+  playSound: vi.fn(),
   state: {
     locale: 'en',
     textToSpeechLocale: undefined,
+    textToSpeechEnabled: true,
     guideShowing: false,
     guideTypingTimer: undefined,
   },
@@ -38,7 +40,7 @@ vi.mock('@/oceans/state', () => ({
   setState: mocks.setState,
 }));
 vi.mock('@/oceans/models/soundLibrary', () => ({
-  default: {playSound: vi.fn()},
+  default: {playSound: mocks.playSound},
 }));
 vi.mock('@/oceans/i18n', () => ({default: {t: (key: string) => key}}));
 vi.mock('react-typist', () => ({
@@ -66,7 +68,10 @@ function startClip() {
 describe('Guide text synced to an audio clip', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.assign(mocks.state, {guideShowing: false});
+    Object.assign(mocks.state, {
+      guideShowing: false,
+      textToSpeechEnabled: true,
+    });
     mocks.getState.mockReturnValue(mocks.state);
     mocks.setState.mockImplementation(patch =>
       Object.assign(mocks.state, patch),
@@ -112,6 +117,23 @@ describe('Guide text synced to an audio clip', () => {
       container.querySelector('.ocean-guide__final-text--shown')?.textContent,
     ).toContain('Hello ocean');
     expect(mocks.dismissCurrentGuide).not.toHaveBeenCalled();
+  });
+
+  it('switches from clip narration to typing sound and finishes the remaining text', () => {
+    vi.useFakeTimers();
+    try {
+      const {container, rerender} = startClip();
+      mocks.state.textToSpeechEnabled = false;
+      rerender(<Guide />);
+
+      expect(mocks.stop).toHaveBeenCalledTimes(1);
+      act(() => vi.advanceTimersByTime(105));
+
+      expect(typedText(container)).toBe('Hel');
+      expect(mocks.playSound).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('falls back to typed text and Web Speech if the clip fails', () => {

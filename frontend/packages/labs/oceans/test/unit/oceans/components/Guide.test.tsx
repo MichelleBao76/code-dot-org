@@ -175,4 +175,35 @@ describe('Guide narration skip', () => {
       vi.useRealTimers();
     }
   });
+
+  it('does not speak with narration off, then starts from the beginning when enabled', () => {
+    mocks.state.textToSpeechEnabled = false;
+    const {rerender} = render(<Guide />);
+
+    expect(mocks.speak).not.toHaveBeenCalled();
+
+    mocks.state.textToSpeechEnabled = true;
+    rerender(<Guide />);
+
+    expect(mocks.speak).toHaveBeenCalledTimes(1);
+    expect(mocks.speak).toHaveBeenCalledWith(
+      'Localized guide text',
+      'es-MX',
+      expect.any(Object),
+    );
+  });
+
+  it('stops speech immediately when disabled and restarts it when enabled again', () => {
+    const {container, rerender} = render(<Guide />);
+    fireEvent.click(container.querySelector('#uitest-dismiss-guide')!);
+    expect(mocks.speak).toHaveBeenCalledTimes(1);
+
+    mocks.state.textToSpeechEnabled = false;
+    rerender(<Guide />);
+    expect(mocks.cancel).toHaveBeenCalledTimes(1);
+
+    mocks.state.textToSpeechEnabled = true;
+    rerender(<Guide />);
+    expect(mocks.speak).toHaveBeenCalledTimes(2);
+  });
 });

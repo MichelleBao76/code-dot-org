@@ -89,17 +89,17 @@ class Guide extends React.Component<Record<string, never>> {
   gestureSeen = false;
   typingSoundGuideId: string | null = null;
   typingSoundTimer: ReturnType<typeof setInterval> | undefined;
+  syncedTypingTimer: ReturnType<typeof setInterval> | undefined;
+  lastGuideId: string | null = null;
+  lastTextToSpeechEnabled = getState().textToSpeechEnabled;
 
   componentDidMount() {
-    this.syncSpeech();
+    this.syncPlayback();
   }
 
   componentWillUnmount() {
     this.stopTypingSound();
-    cancelSpeech();
-  }
-
-  componentWillUnmount() {
+    this.stopSyncedTyping();
     this.stopNarration();
   }
 
@@ -111,22 +111,48 @@ class Guide extends React.Component<Record<string, never>> {
     this.speechGuideId = null;
   }
 
-  /** Speak each guide once when it appears; stop when it closes. */
-  syncSpeech() {
+  /** Apply narration and typing audio to the current guide and setting. */
+  syncPlayback() {
     const currentGuide = guide.getCurrentGuide();
-    if (this.spokenGuideId && this.spokenGuideId !== currentGuide?.id) {
+    const currentGuideId = currentGuide?.id ?? null;
+    const guideChanged = currentGuideId !== this.lastGuideId;
+    const enabled = getState().textToSpeechEnabled;
+    const settingChanged = enabled !== this.lastTextToSpeechEnabled;
+
+    if (guideChanged) {
+      if (this.lastGuideId !== null) {
+        this.stopNarration();
+      }
+      this.spokenGuideId = null;
+      this.syncedGuideId = null;
+      this.syncedChars = 0;
+      this.stopSyncedTyping();
+      this.lastGuideId = currentGuideId;
+    }
+
+    if (settingChanged && !enabled) {
       this.stopNarration();
       this.spokenGuideId = null;
-      this.speechGuideId = null;
-      return;
-    }
-    if (this.spokenGuideId && this.spokenGuideId !== currentGuide?.id) {
-      this.stopNarration();
+      if (currentGuide && this.syncedGuideId === currentGuide.id) {
+        this.continueSyncedTyping(currentGuide);
+      }
+    } else if (settingChanged && enabled) {
       this.spokenGuideId = null;
+      this.gestureSeen = true;
+      this.stopSyncedTyping();
     }
-    if (currentGuide && pageHasUserActivation(this.gestureSeen)) {
+    this.lastTextToSpeechEnabled = enabled;
+
+    if (
+      enabled &&
+      currentGuide &&
+      (guideChanged || settingChanged) &&
+      pageHasUserActivation(this.gestureSeen)
+    ) {
       this.speakGuide(currentGuide);
     }
+
+    this.syncTypingSound(currentGuide);
   }
 
   syncTypingSound(currentGuide: GuideEntry | null) {
@@ -164,6 +190,27 @@ class Guide extends React.Component<Record<string, never>> {
       setState({guideTypingTimer: undefined}, {skipCallback: true});
     }
     this.typingSoundGuideId = null;
+  }
+
+  continueSyncedTyping(currentGuide: GuideEntry) {
+    if (this.syncedTypingTimer !== undefined) {
+      return;
+    }
+    const text = currentGuide.textFn(getState());
+    this.syncedTypingTimer = setInterval(() => {
+      this.syncedChars = Math.min(this.syncedChars + 1, text.length);
+      this.forceUpdate();
+      if (this.syncedChars === text.length) {
+        this.onTypingDone();
+      }
+    }, 35);
+  }
+
+  stopSyncedTyping() {
+    if (this.syncedTypingTimer !== undefined) {
+      clearInterval(this.syncedTypingTimer);
+      this.syncedTypingTimer = undefined;
+    }
   }
 
   /** Starts speech for `currentGuide` unless already tried; true if started. */
@@ -238,7 +285,7 @@ class Guide extends React.Component<Record<string, never>> {
   }
 
   componentDidUpdate() {
-    this.syncSpeech();
+    this.syncPlayback();
 
     // Focus the dialog only when the guide changes, not on every re-render
     const currentGuide = guide.getCurrentGuide();
@@ -260,6 +307,11 @@ class Guide extends React.Component<Record<string, never>> {
   }
   onTypingDone = () => {
     this.stopTypingSound();
+    this.stopSyncedTyping();
+    const currentGuide = guide.getCurrentGuide();
+    if (currentGuide && this.syncedGuideId === currentGuide.id) {
+      this.syncedChars = currentGuide.textFn(getState()).length;
+    }
     setState({guideShowing: true, guideTypingTimer: undefined});
   };
 

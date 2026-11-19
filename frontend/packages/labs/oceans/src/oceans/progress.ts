@@ -1,4 +1,4 @@
-import {AppMode} from './constants';
+import {AppMode, Modes} from './constants';
 import {getState, setState} from './state';
 
 interface Checkpoint {
@@ -9,7 +9,20 @@ interface Checkpoint {
   word: string | null;
   trainingQuestion: string | null;
   guideDismissals: string[];
+  /** Stage to resume at; older saves without it resume at training. */
+  stage?: number;
 }
+
+/**
+ * Stages a student can resume at.  Results (Pond) resume at the Run step,
+ * since its predictions are rebuilt from the restored model.
+ */
+const RESUME_STAGE: Record<number, number> = {
+  [Modes.Words]: Modes.Words,
+  [Modes.Training]: Modes.Training,
+  [Modes.Predicting]: Modes.Predicting,
+  [Modes.Pond]: Modes.Predicting,
+};
 
 export type SaveStatus =
   | 'disabled'
@@ -20,6 +33,8 @@ export type SaveStatus =
 let key: string | undefined;
 let pending: Checkpoint | undefined;
 let signature = '';
+/** Last stage saved, kept while loading screens are showing. */
+let lastStage: number | undefined;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let status: SaveStatus = 'disabled';
 const listeners = new Set<() => void>();
@@ -43,6 +58,7 @@ export function configureProgress(progressKey?: string, locale = 'en'): void {
   clearTimeout(timer);
   pending = undefined;
   signature = '';
+  lastStage = undefined;
   const state = getState();
   key =
     progressKey && state.appMode !== AppMode.CreaturesVTrashDemo
@@ -71,6 +87,11 @@ export function configureProgress(progressKey?: string, locale = 'en'): void {
       saved.guideDismissals.some(id => typeof id !== 'string')
     )
       throw new Error('Invalid checkpoint');
+    // An unknown stage is not worth discarding the training for.
+    if (saved.stage !== undefined && !(saved.stage in RESUME_STAGE)) {
+      delete saved.stage;
+    }
+    lastStage = saved.stage;
     pending = saved;
   } catch {
     notify('unavailable');
@@ -78,6 +99,28 @@ export function configureProgress(progressKey?: string, locale = 'en'): void {
 }
 
 export const hasSavedTraining = (): boolean => !!pending;
+
+/** Where a restored student should resume, if a save recorded it. */
+export const savedStage = (): number | undefined =>
+  pending?.stage === undefined ? undefined : RESUME_STAGE[pending.stage];
+
+/**
+ * Restores only which guides were closed.  Used when resuming at the word
+ * picker: New Word erases training, so the saved word must not come back.
+ */
+export function restoreGuidesOnly(): void {
+  const saved = pending;
+  pending = undefined;
+  if (!saved) return;
+  setState({guideDismissals: saved.guideDismissals});
+  notify('restored');
+}
+
+const currentStage = (): number | undefined => {
+  const stage = RESUME_STAGE[getState().currentMode ?? -1];
+  if (stage !== undefined) lastStage = stage;
+  return lastStage;
+};
 
 export function restoreProgress(): void {
   const saved = pending;
@@ -111,6 +154,7 @@ export function saveProgress(): void {
       word: state.word,
       trainingQuestion: state.trainingQuestion,
       guideDismissals: state.guideDismissals,
+      stage: currentStage(),
     };
     const json = JSON.stringify(saved);
     if (json.length > MAX_BYTES) throw new Error('Checkpoint too large');
@@ -129,6 +173,7 @@ export function scheduleProgressSave(): void {
     state.noCount,
     state.word,
     state.guideDismissals,
+    currentStage(),
   ]);
   if (next === signature) return;
   signature = next;

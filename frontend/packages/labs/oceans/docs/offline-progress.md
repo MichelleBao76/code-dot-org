@@ -4,9 +4,16 @@
 
 The React OceansLab entrypoint saves training on this browser and device by default.
 The saved checkpoint contains the classifier examples, answer counts, selected word,
-training question, and dismissed guide IDs. Reloading returns to training with a new
-object queue. Run the restored model again to see its predictions. Prediction animation
-position, results layout, course completion, and teacher records are not saved.
+training question, dismissed guide IDs, and the stage the student was on. Reloading
+returns to that stage with a new object queue: the word picker, training, or testing.
+A student who was viewing results resumes at testing; pressing Run rebuilds the
+predictions from the restored model. Resuming at the word picker after New Word
+restores only dismissed guides, so the erased word does not return. Saves made
+before stages were recorded resume at training. Prediction animation position,
+results layout, course completion, and teacher records are not saved.
+
+Saves are about 4,100 characters per answer in the image modes (256 numbers per
+example), so the 4,000,000-character limit allows roughly 970 answers.
 
 KNN stores its feature tensors; SVM stores its labelled feature vectors. Neither
 requires a network request to classify objects once the game resources are loaded.

@@ -4,7 +4,7 @@ import {AppMode, Modes} from '../constants';
 import {getAppMode, $time, finishLoading} from '../helpers';
 import I18n from '../i18n';
 import {toMode} from '../modeTransition';
-import {hasSavedTraining} from '../progress';
+import {hasSavedTraining, restoreGuidesOnly, savedStage} from '../progress';
 import {initRenderer} from '../renderer';
 import {getState, setState} from '../state';
 
@@ -59,7 +59,17 @@ export const init = async (): Promise<void> => {
     mode = Modes.Words;
   }
 
-  finishLoading(startTime, () =>
-    toMode(hasSavedTraining() ? Modes.Training : mode),
-  );
+  const resumeStage = savedStage();
+  finishLoading(startTime, () => {
+    if (resumeStage === Modes.Predicting) {
+      // Training restores the saved model, so pass through it on the way.
+      toMode(Modes.Training);
+      toMode(Modes.Predicting);
+    } else if (resumeStage === Modes.Words) {
+      restoreGuidesOnly();
+      toMode(Modes.Words);
+    } else {
+      toMode(hasSavedTraining() ? Modes.Training : mode);
+    }
+  });
 };

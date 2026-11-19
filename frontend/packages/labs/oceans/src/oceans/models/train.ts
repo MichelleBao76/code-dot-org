@@ -3,6 +3,7 @@ import KNNTrainer from '../../utils/KNNTrainer';
 import SVMTrainer from '../../utils/SVMTrainer';
 import {ClassType, AppMode} from '../constants';
 import I18n from '../i18n';
+import {restoreProgress} from '../progress';
 import {setState, getState} from '../state';
 
 /** Initialize the training model: set up the trainer and seed the fish pool. */
@@ -48,6 +49,7 @@ const init = (): void => {
     trainer,
     isRunning: true,
   });
+  restoreProgress();
 };
 
 /**

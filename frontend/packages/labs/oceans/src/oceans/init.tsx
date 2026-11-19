@@ -4,6 +4,12 @@ import constants, {Modes, OCEANS_UI_CONTAINER_ID} from './constants';
 import I18n from './i18n';
 import modeHelpers from './modeHelpers';
 import soundLibrary from './models/soundLibrary';
+import {
+  configureProgress,
+  saveProgress,
+  scheduleProgressSave,
+  stopProgress,
+} from './progress';
 import {render as renderCanvas, stopRender} from './renderer';
 import {
   getState,
@@ -21,6 +27,7 @@ export interface InitAllOptions {
   guides?: string;
   textToSpeechLocale?: string;
   locale?: string;
+  progressKey?: string;
   playSound: (id: string, options?: {volume?: number}) => void;
   registerSound: (descriptor: {id: string; mp3: string}) => void;
   i18n?: Record<string, (opts?: Record<string, unknown>) => string>;
@@ -65,6 +72,10 @@ export const initAll = function (options: InitAllOptions): void {
     ...options,
   });
 
+  configureProgress(options.progressKey, I18n.getLocale());
+  window.addEventListener('pagehide', saveProgress);
+  document.addEventListener('visibilitychange', saveWhenHidden);
+
   // Initialize our first model.
   modeHelpers.toMode(Modes.Loading);
 
@@ -80,12 +91,20 @@ export const initAll = function (options: InitAllOptions): void {
 };
 
 export const stopUIRerender = (): void => {
+  stopProgress();
+  window.removeEventListener('pagehide', saveProgress);
+  document.removeEventListener('visibilitychange', saveWhenHidden);
   clearInterval(getState().guideTypingTimer);
   setState({guideTypingTimer: undefined}, {skipCallback: true});
   stopRender();
 };
 
+function saveWhenHidden(): void {
+  if (document.visibilityState === 'hidden') saveProgress();
+}
+
 function renderUI(): void {
+  scheduleProgressSave();
   const container = document.getElementById(OCEANS_UI_CONTAINER_ID);
   if (!container) {
     return;

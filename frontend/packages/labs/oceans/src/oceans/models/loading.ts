@@ -4,6 +4,7 @@ import {AppMode, Modes} from '../constants';
 import {getAppMode, $time, finishLoading} from '../helpers';
 import I18n from '../i18n';
 import {toMode} from '../modeTransition';
+import {hasSavedTraining} from '../progress';
 import {initRenderer} from '../renderer';
 import {getState, setState} from '../state';
 
@@ -58,5 +59,7 @@ export const init = async (): Promise<void> => {
     mode = Modes.Words;
   }
 
-  finishLoading(startTime, () => toMode(mode));
+  finishLoading(startTime, () =>
+    toMode(hasSavedTraining() ? Modes.Training : mode),
+  );
 };

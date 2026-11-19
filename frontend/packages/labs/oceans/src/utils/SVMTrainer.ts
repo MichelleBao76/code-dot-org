@@ -217,6 +217,30 @@ export default class SVMTrainer<T = unknown> {
     this.initTrainingState();
   }
 
+  getDatasetJSON(): string {
+    return JSON.stringify(this.labeledTrainingData);
+  }
+
+  loadDatasetJSON(json: string): void {
+    const entries: LabeledDatum[] = JSON.parse(json);
+    if (
+      !Array.isArray(entries) ||
+      entries.some(
+        entry =>
+          !entry ||
+          ![-1, 1].includes(entry.label) ||
+          !Array.isArray(entry.example) ||
+          !entry.example.length ||
+          entry.example.some(value => !Number.isFinite(value)) ||
+          entry.example.length !== entries[0].example.length,
+      )
+    )
+      throw new Error('Invalid saved training data');
+    this.clearAll();
+    this.labeledTrainingData = entries;
+    this.labelsSeen = new Set(entries.map(entry => entry.label));
+  }
+
   /**
    * Returns the absolute weight the trained model assigns to each input field,
    * sorted descending by absolute weight.

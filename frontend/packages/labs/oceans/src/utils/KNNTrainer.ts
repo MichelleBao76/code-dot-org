@@ -128,11 +128,28 @@ export default class KNNTrainer<T = unknown> {
    * @param datasetJson - JSON string returned by `getDatasetJSON`.
    */
   loadDatasetJSON(datasetJson: string): void {
-    this.clearAll();
     const tensorObj = JSON.parse(datasetJson) as Record<
       string,
       {data: number[]; shape: number[]}
     >;
+    if (
+      !tensorObj ||
+      typeof tensorObj !== 'object' ||
+      Array.isArray(tensorObj) ||
+      Object.entries(tensorObj).some(
+        ([key, tensor]) =>
+          !['0', '1'].includes(key) ||
+          !tensor ||
+          !Array.isArray(tensor.shape) ||
+          tensor.shape.length !== 2 ||
+          tensor.shape.some(size => !Number.isSafeInteger(size) || size <= 0) ||
+          !Array.isArray(tensor.data) ||
+          tensor.data.some(value => !Number.isFinite(value)) ||
+          tensor.shape[0] * tensor.shape[1] !== tensor.data.length,
+      )
+    )
+      throw new Error('Invalid saved training data');
+    this.clearAll();
     Object.keys(tensorObj).forEach(key => {
       tensorObj[key] = tf.tensor(
         Array.from(tensorObj[key].data),

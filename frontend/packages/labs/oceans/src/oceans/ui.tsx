@@ -6,6 +6,7 @@ import Predict from '@/oceans/components/scenes/predict';
 import Train from '@/oceans/components/scenes/train';
 import Words from '@/oceans/components/scenes/words';
 
+import ConnectivityStatus from './components/common/ConnectivityStatus';
 import {Modes} from './constants';
 import I18n from './i18n';
 import {getState, setState} from './state';
@@ -20,6 +21,7 @@ export default class UI extends React.Component {
 
     return (
       <section aria-label={I18n.t('a11yLab')} lang={I18n.getLocale()}>
+        <ConnectivityStatus />
         <div inert={state.showConfirmationDialog || undefined}>
           {isLoading && <Loading />}
           {currentMode === Modes.Words && <Words />}

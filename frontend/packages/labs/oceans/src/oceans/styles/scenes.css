@@ -871,3 +871,19 @@
   font-weight: normal;
   margin: 0;
 }
+
+.ocean-connectivity {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  pointer-events: none;
+  padding: 0.25em 0.5em;
+  background: #fff;
+  color: #1b303b;
+  font-size: max(14px, 0.75em);
+}
+.ocean-connectivity p {
+  margin: 0;
+}

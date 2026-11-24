@@ -50,11 +50,17 @@ export default function SceneDescription({state}: {state: State}) {
         });
     }
   } else if (state.currentMode === Modes.Pond) {
-    status = I18n.t('a11yResultsSummary', {
-      matching: state.totalPondFish ?? state.pondFish.length,
-      total: state.fishData.length,
-      word: state.word ?? '',
-    });
+    status =
+      state.totalCorrectPredictions !== null
+        ? I18n.t('a11yCorrectCount', {
+            correct: state.totalCorrectPredictions,
+            total: state.fishData.length,
+          })
+        : I18n.t('a11yResultsSummary', {
+            matching: state.totalPondFish ?? state.pondFish.length,
+            total: state.fishData.length,
+            word: state.word ?? '',
+          });
   }
   return (
     <>
@@ -75,7 +81,9 @@ export default function SceneDescription({state}: {state: State}) {
           state.currentMode === Modes.Training
             ? 'a11yQuestion'
             : state.currentMode === Modes.Pond
-              ? 'a11yResultsSummary'
+              ? state.totalCorrectPredictions !== null
+                ? 'a11yCorrectCount'
+                : 'a11yResultsSummary'
               : 'a11yPredictReady',
         )}
         className="ocean-visually-hidden"

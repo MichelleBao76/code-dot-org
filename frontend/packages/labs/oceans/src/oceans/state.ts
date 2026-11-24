@@ -38,6 +38,8 @@ export interface State {
   recallFish: PondFish[];
   showRecallFish: boolean;
   totalPondFish: number | null;
+  /** Number of objectively correct AI predictions, when the mode has known labels. */
+  totalCorrectPredictions: number | null;
   backgroundCanvas: HTMLCanvasElement | null;
   canvas: HTMLCanvasElement | null;
   ctx: CanvasRenderingContext2D | null;
@@ -116,6 +118,7 @@ const initialState: State = {
   recallFish: [],
   showRecallFish: false,
   totalPondFish: null,
+  totalCorrectPredictions: null,
   backgroundCanvas: null,
   canvas: null,
   ctx: null,

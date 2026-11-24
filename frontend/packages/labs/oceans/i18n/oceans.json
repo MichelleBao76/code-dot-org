@@ -172,6 +172,7 @@
   "a11yPredictContinue": "The demonstration is ready. Choose Continue to advance.",
   "a11yResults": "Object descriptions and results",
   "a11yResultsSummary": "The AI classified {matching} of {total} objects as {word}.",
+  "a11yCorrectCount": "The AI correctly classified {correct} out of {total} objects.",
   "a11yMatching": "Predicted matching objects",
   "a11yNotMatching": "Predicted non-matching objects",
   "a11yDisplayedObjects": "Showing {count} objects from this group.",

@@ -354,6 +354,14 @@ class Pond extends React.Component {
         )}
         <details className="ocean-accessible-results">
           <summary>{I18n.t('a11yResults')}</summary>
+          {state.totalCorrectPredictions !== null && (
+            <p>
+              {I18n.t('a11yCorrectCount', {
+                correct: state.totalCorrectPredictions,
+                total: state.fishData.length,
+              })}
+            </p>
+          )}
           <p>
             {I18n.t('a11yResultsSummary', {
               matching: state.totalPondFish ?? state.pondFish.length,

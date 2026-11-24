@@ -1,6 +1,7 @@
 import _ from 'lodash';
 
 import constants, {ClassType, AppMode} from '../constants';
+import {FishOceanObject, SeaCreatureOceanObject} from '../OceanObject';
 import {setState, getState} from '../state';
 import type {PondFish, State} from '../state';
 
@@ -13,6 +14,32 @@ import type {PondFish, State} from '../state';
  */
 type PondPredictionResult = {predictedClassId: number};
 type ModelPondFish = PondFish;
+
+/**
+ * Count correct classifications when objects have an objective fish/trash label.
+ * Word-attribute modes depend on the student's chosen meaning, so they do not
+ * have a reliable ground-truth accuracy score.
+ */
+export const countCorrectPredictions = (
+  fish: PondFish[],
+  appMode: State['appMode'],
+): number | null => {
+  if (appMode !== AppMode.FishVTrash && appMode !== AppMode.CreaturesVTrash) {
+    return null;
+  }
+
+  return fish.filter(object => {
+    const shouldMatch =
+      object instanceof FishOceanObject ||
+      (appMode === AppMode.CreaturesVTrash &&
+        object instanceof SeaCreatureOceanObject);
+    const expectedClassId = shouldMatch ? ClassType.Like : ClassType.Dislike;
+    return (
+      (object.getResult() as PondPredictionResult | null)?.predictedClassId ===
+      expectedClassId
+    );
+  }).length;
+};
 
 /**
  * Initialize the pond model: run all pending predictions, split fish into
@@ -29,7 +56,13 @@ export const init = async (): Promise<void> => {
   );
 
   let pondFish = fishByClassType[ClassType.Like] || [];
-  setState({totalPondFish: pondFish.length});
+  setState({
+    totalPondFish: pondFish.length,
+    totalCorrectPredictions: countCorrectPredictions(
+      fishWithPredictions,
+      state.appMode,
+    ),
+  });
   pondFish = pondFish.splice(0, constants.maxPondFish);
   const recallFish = (fishByClassType[ClassType.Dislike] || []).splice(
     0,
@@ -66,25 +99,19 @@ export const init = async (): Promise<void> => {
  * @param state - Current lab state.
  * @returns Promise resolving to the array of all fish with predictions attached.
  */
-const predictAllFish = (
+const predictAllFish = async (
   state: ReturnType<typeof getState>,
 ): Promise<ModelPondFish[]> => {
-  return new Promise(resolve => {
-    const trainer = state.trainer as unknown as {
-      predict: (fish: unknown) => Promise<unknown>;
-    };
-    const fishWithConfidence: ModelPondFish[] = [];
-    (state.fishData as ModelPondFish[]).map((fish, index) => {
-      trainer.predict(fish).then(res => {
-        fish.setResult(res);
-        fishWithConfidence.push(fish);
-
-        if (index === state.fishData.length - 1) {
-          resolve(fishWithConfidence);
-        }
-      });
-    });
-  });
+  const trainer = state.trainer as unknown as {
+    predict: (fish: unknown) => Promise<unknown>;
+  };
+  // Wait for every prediction before calculating the full results total.
+  return Promise.all(
+    (state.fishData as ModelPondFish[]).map(async fish => {
+      fish.setResult(await trainer.predict(fish));
+      return fish;
+    }),
+  );
 };
 
 /**

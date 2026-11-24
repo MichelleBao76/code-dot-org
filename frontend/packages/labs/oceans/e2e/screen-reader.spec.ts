@@ -81,6 +81,9 @@ test('results can be read and individual objects selected with the keyboard', as
 }) => {
   const oceans = await FishVTrashPage.load(page);
   await oceans.fullFlow(2, 2);
+  await expect(page.locator('#ocean-scene-description')).toContainText(
+    /The AI correctly classified \d+ out of \d+ objects\./,
+  );
   const summary = page.locator('.ocean-accessible-results summary');
   await summary.focus();
   await page.keyboard.press('Enter');

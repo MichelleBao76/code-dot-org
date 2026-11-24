@@ -76,6 +76,20 @@ it('announces a new question without replacing focus on each animation frame', (
   control.remove();
 });
 
+it('announces the correct total on the results scene', () => {
+  setState({
+    currentMode: Modes.Pond,
+    totalCorrectPredictions: 25,
+    fishData: Array.from({length: 30}, (_, index) =>
+      new TrashOceanObject(index),
+    ),
+  });
+  const {getByRole} = render(<SceneDescription state={getState()} />);
+  expect(getByRole('status').textContent).toBe(
+    'The AI correctly classified 25 out of 30 objects.',
+  );
+});
+
 it('keeps answer focus while blocking animation-time clicks', () => {
   const answer = vi.fn();
   const {getByRole, rerender} = render(<Button onClick={answer}>Yes</Button>);
